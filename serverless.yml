@@ -1,0 +1,36 @@
+org: juanrodo
+service: sync-elasticsearch
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  memorySize: 1024
+  timeout: 30
+  iam:
+    role: arn:aws:iam::752087942362:role/LabRole
+    
+functions:
+  procesarCursosStream:
+    handler: cursoStream.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::ImportValue: api-curso-${sls:stage}-CursoStreamArn
+          batchSize: 5
+          startingPosition: LATEST
+
+  procesarHorariosStream:
+    handler: horarioStream.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::ImportValue: api-horario-${sls:stage}-HorarioStreamArn
+          batchSize: 5
+          startingPosition: LATEST
+
+package:
+  individually: false
+  include:
+    - '**'
