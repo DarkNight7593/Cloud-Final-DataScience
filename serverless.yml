@@ -32,6 +32,16 @@ functions:
           batchSize: 5
           startingPosition: LATEST
 
+  procesarComprasStream:
+    handler: compraStream.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::ImportValue: api-compras-${sls:stage}-CompraStreamArn
+          batchSize: 5
+          startingPosition: LATEST
+
 package:
   individually: false
   include:
