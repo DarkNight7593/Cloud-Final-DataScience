@@ -8,6 +8,8 @@ provider:
   timeout: 30
   iam:
     role: arn:aws:iam::752087942362:role/LabRole
+  environment:
+    TABLE_ORG: ${sls:stage}-t_org
     
 functions:
   procesarCursosStream:

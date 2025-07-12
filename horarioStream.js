@@ -1,8 +1,11 @@
 const AWS = require('aws-sdk');
 const { Client } = require('@elastic/elasticsearch');
 
-const es = new Client({ node: 'http://34.233.20.17:9201' }); // Cambia la IP si es necesario
-const INDEX_CURSO = 'cursos';
+const REGION = process.env.AWS_REGION || 'us-east-1';
+const TABLE_ORG = process.env.TABLE_ORG;
+const IP_ES = '34.233.20.17';
+
+const ddb = new AWS.DynamoDB.DocumentClient({ region: REGION });
 
 function calcularMinutos(horaStr) {
   const [h, m] = horaStr.split(':').map(Number);
@@ -29,7 +32,6 @@ exports.handler = async (event) => {
     console.log('📦 Horario recibido:', JSON.stringify(horario, null, 2));
 
     const { tenant_id_curso_id, horario_id } = horario;
-
     if (!tenant_id_curso_id || !horario_id) {
       console.warn(`⚠️ Faltan tenant_id_curso_id o horario_id`);
       continue;
@@ -46,11 +48,32 @@ exports.handler = async (event) => {
       horario.fin_hora_min = calcularMinutos(horario.fin_hora);
     }
 
-    let curso;
+    // 🔍 Obtener puerto desde la tabla de organizaciones
+    let puerto;
+    try {
+      const { Item } = await ddb.get({
+        TableName: TABLE_ORG,
+        Key: { tenant_id }
+      }).promise();
 
+      if (!Item?.puerto) {
+        console.warn(`⚠️ Puerto no encontrado para tenant_id ${tenant_id}`);
+        continue;
+      }
+
+      puerto = Item.puerto;
+    } catch (e) {
+      console.error(`❌ Error al consultar puerto del tenant ${tenant_id}:`, e);
+      continue;
+    }
+
+    // Crear cliente de Elasticsearch con el puerto del tenant
+    const es = new Client({ node: `http://${IP_ES}:${puerto}` });
+
+    let curso;
     try {
       const { _source } = await es.get({
-        index: INDEX_CURSO,
+        index: 'cursos',
         id: docId
       });
       curso = _source;
@@ -58,10 +81,10 @@ exports.handler = async (event) => {
     } catch (err) {
       if (err.meta?.statusCode === 404) {
         console.warn(`⚠️ Curso no encontrado en Elasticsearch: ${docId}`);
-        continue; // no hay curso para modificar
+        continue;
       }
       console.error(`❌ Error al obtener curso ${docId}:`, err);
-      throw err;
+      continue;
     }
 
     console.log(`📘 Documento de curso encontrado:`, JSON.stringify(curso, null, 2));
@@ -91,19 +114,17 @@ exports.handler = async (event) => {
       }
 
       await es.index({
-        index: INDEX_CURSO,
+        index: 'cursos',
         id: docId,
         document: curso
       });
 
-      console.log(`📤 Curso actualizado en Elasticsearch con ID: ${docId}`);
+      console.log(`📤 Curso actualizado en Elasticsearch con ID: ${docId} (puerto: ${puerto})`);
 
     } catch (err) {
       console.error(`❌ Error al procesar horario (${eventName}):`, err);
-      throw err;
     }
   }
 
   return { statusCode: 200 };
 };
-
