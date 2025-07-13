@@ -7,13 +7,10 @@ exports.handler = async ({ Records }) => {
   for (const record of Records) {
     const { eventName, dynamodb: ddb } = record;
 
-    const image = eventName === 'REMOVE'
-      ? ddb.OldImage
-      : ddb.NewImage;
-
+    const image = eventName === 'REMOVE' ? ddb.OldImage : ddb.NewImage;
     const item = AWS.DynamoDB.Converter.unmarshall(image);
-    const { tenant_id_dni_estado, curso_id } = item;
 
+    const { tenant_id_dni_estado, curso_id } = item;
     if (!tenant_id_dni_estado || !curso_id) {
       console.warn(`⚠️ Datos faltantes para evento ${eventName}`);
       continue;
@@ -46,8 +43,6 @@ exports.handler = async ({ Records }) => {
       estado,
       horario_id,
       dias,
-      inicio,
-      fin,
       inicio_hora,
       fin_hora,
       precio
@@ -62,11 +57,9 @@ exports.handler = async ({ Records }) => {
       instructor_nombre,
       estado,
       horario_id,
-      dias,
-      normalizarFecha(inicio),
-      normalizarFecha(fin),
-      normalizarHora(inicio_hora),
-      normalizarHora(fin_hora),
+      JSON.stringify(dias ?? []), // Serializar como array
+      normalizarHoraComoTime(inicio_hora),
+      normalizarHoraComoTime(fin_hora),
       precio
     ];
 
@@ -88,19 +81,9 @@ exports.handler = async ({ Records }) => {
   return { statusCode: 200, body: 'OK' };
 };
 
-// Formato compatible con Athena y Glue
-function normalizarFecha(f) {
-  try {
-    const d = typeof f === 'string' ? new Date(f) : f instanceof Date ? f : null;
-    if (!d || isNaN(d)) return '';
-    return d.toISOString().split('T')[0]; // yyyy-MM-dd
-  } catch {
-    return '';
-  }
-}
-
-function normalizarHora(h) {
+// Formato Athena TIME
+function normalizarHoraComoTime(h) {
   if (typeof h !== 'string') return '';
   const hhmm = h.match(/^\d{2}:\d{2}/);
-  return hhmm ? hhmm[0] : '';
+  return hhmm ? `${hhmm[0]}:00` : '';
 }
