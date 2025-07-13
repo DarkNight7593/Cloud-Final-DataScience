@@ -17,7 +17,7 @@ resources:
     ComprasBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: DataScience-Compras-Pruebas-${sls:stage}
+        BucketName: dataScience-compras-pruebas-${sls:stage}
 
 functions:
   procesarCursosStream:
