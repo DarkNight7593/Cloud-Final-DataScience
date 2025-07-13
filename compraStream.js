@@ -7,79 +7,81 @@ exports.handler = async ({ Records }) => {
   for (const record of Records) {
     const { eventName, dynamodb: ddb } = record;
 
-    if (eventName === 'REMOVE') {
-      const oldItem = AWS.DynamoDB.Converter.unmarshall(ddb.OldImage);
-      const { tenant_id, tenant_id_dni_estado, curso_id } = oldItem;
+    const image = eventName === 'REMOVE'
+      ? ddb.OldImage
+      : ddb.NewImage;
 
-      if (!tenant_id || !tenant_id_dni_estado || !curso_id) {
-        console.warn('Datos faltantes para eliminar');
-        continue;
-      }
+    const item = AWS.DynamoDB.Converter.unmarshall(image);
+    const { tenant_id_dni_estado, curso_id } = item;
 
-      const fileName = `${tenant_id_dni_estado}#${curso_id}.csv`;
-      const objectKey = `${tenant_id}/${fileName}`;
-
-      await s3.deleteObject({ Bucket: BUCKET, Key: objectKey }).promise();
-      console.log(`🗑️ Eliminado: ${objectKey}`);
+    if (!tenant_id_dni_estado || !curso_id) {
+      console.warn(`⚠️ Datos faltantes para evento ${eventName}`);
       continue;
     }
 
-    if (eventName === 'INSERT' || eventName === 'MODIFY') {
-      const newItem = AWS.DynamoDB.Converter.unmarshall(ddb.NewImage);
-      const {
-        tenant_id,
-        tenant_id_dni_estado: pk,
-        curso_id,
-        curso_nombre,
-        alumno_dni,
-        alumno_nombre,
-        instructor_dni,
-        instructor_nombre,
-        estado,
-        horario_id,
-        dias,
-        inicio,
-        fin,
-        inicio_hora,
-        fin_hora,
-        precio
-      } = newItem;
+    const [tenant_id] = tenant_id_dni_estado.split('#');
+    const fileName = `${tenant_id_dni_estado}#${curso_id}.csv`;
+    const objectKey = `${tenant_id}/${fileName}`;
 
-      if (!tenant_id || !pk || !curso_id) {
-        console.warn('Datos faltantes para insertar o modificar');
-        continue;
+    if (eventName === 'REMOVE') {
+      try {
+        await s3.deleteObject({
+          Bucket: BUCKET,
+          Key: objectKey
+        }).promise();
+        console.log(`🗑️ Eliminado: ${objectKey}`);
+      } catch (e) {
+        console.error(`❌ Error eliminando archivo: ${objectKey}`, e);
       }
+      continue;
+    }
 
-      const fileName = `${pk}#${curso_id}.csv`;
-      const objectKey = `${tenant_id}/${fileName}`;
+    // INSERT o MODIFY
+    const {
+      curso_nombre,
+      alumno_dni,
+      alumno_nombre,
+      instructor_dni,
+      instructor_nombre,
+      estado,
+      horario_id,
+      dias,
+      inicio,
+      fin,
+      inicio_hora,
+      fin_hora,
+      precio
+    } = item;
 
-      const fields = [
-        curso_id,
-        curso_nombre,
-        alumno_dni,
-        alumno_nombre,
-        instructor_dni,
-        instructor_nombre,
-        estado,
-        horario_id,
-        dias,
-        normalizarFecha(inicio),
-        normalizarFecha(fin),
-        normalizarHora(inicio_hora),
-        normalizarHora(fin_hora),
-        precio
-      ];
+    const fields = [
+      curso_id,
+      curso_nombre,
+      alumno_dni,
+      alumno_nombre,
+      instructor_dni,
+      instructor_nombre,
+      estado,
+      horario_id,
+      dias,
+      normalizarFecha(inicio),
+      normalizarFecha(fin),
+      normalizarHora(inicio_hora),
+      normalizarHora(fin_hora),
+      precio
+    ];
 
-      const line = fields.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+    const line = fields.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
 
+    try {
       await s3.putObject({
         Bucket: BUCKET,
         Key: objectKey,
         Body: line + '\n',
         ContentType: 'text/csv'
       }).promise();
-
       console.log(`✅ Actualizado: ${objectKey}`);
+    } catch (e) {
+      console.error(`❌ Error subiendo archivo: ${objectKey}`, e);
     }
   }
 
