@@ -39,7 +39,9 @@ exports.handler = async ({ Records }) => {
       dias,
       inicio_hora,
       fin_hora,
-      precio
+      precio,
+      fecha_inicio,
+      fecha_fin
     } = item;
 
     const obj = {
@@ -54,7 +56,9 @@ exports.handler = async ({ Records }) => {
       dias: dias ?? [],
       inicio_hora: normalizarHora(inicio_hora),
       fin_hora: normalizarHora(fin_hora),
-      precio
+      precio,
+      fecha_inicio: normalizarFecha(fecha_inicio),
+      fecha_fin: normalizarFecha(fecha_fin)
     };
 
     try {
@@ -77,4 +81,10 @@ function normalizarHora(h) {
   if (typeof h !== 'string') return null;
   const m = h.match(/^\d{2}:\d{2}/);
   return m ? `${m[0]}:00` : null;
+}
+
+function normalizarFecha(f) {
+  if (typeof f !== 'string') return null;
+  const match = f.match(/^\d{4}-\d{2}-\d{2}/); // formato YYYY-MM-DD
+  return match ? match[0] : null;
 }
