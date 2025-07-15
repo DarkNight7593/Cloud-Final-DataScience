@@ -56,7 +56,6 @@ exports.handler = async (event) => {
         // Insert inicial: no tiene horarios todavía
         const doc = {
           curso_id,
-          tenant_id,
           nombre: data.nombre,
           descripcion: data.descripcion,
           inicio: data.inicio,
@@ -96,7 +95,6 @@ exports.handler = async (event) => {
 
         const docActualizado = {
           curso_id,
-          tenant_id,
           nombre: data.nombre,
           descripcion: data.descripcion,
           inicio: data.inicio,
