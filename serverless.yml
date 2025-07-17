@@ -10,14 +10,14 @@ provider:
     role: arn:aws:iam::193257252894:role/LabRole
   environment:
     TABLE_ORG: ${sls:stage}-t_org
-    BUCKET_COMPRAS: datascience-compras-pruebas3-${sls:stage}
+    BUCKET_COMPRAS: datascience-compras-pruebas5-${sls:stage}
 
 resources:
   Resources:
     ComprasBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: datascience-compras-pruebas3-${sls:stage}
+        BucketName: datascience-compras-pruebas5-${sls:stage}
 
 functions:
   procesarCursosStream:
