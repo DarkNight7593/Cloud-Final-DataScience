@@ -7,7 +7,7 @@ provider:
   memorySize: 1024
   timeout: 30
   iam:
-    role: arn:aws:iam::735395269158:role/LabRole
+    role: arn:aws:iam::193257252894:role/LabRole
   environment:
     TABLE_ORG: ${sls:stage}-t_org
     BUCKET_COMPRAS: datascience-compras-pruebas3-${sls:stage}
