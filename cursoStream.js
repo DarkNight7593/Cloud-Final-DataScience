@@ -2,7 +2,7 @@ const AWS = require('aws-sdk');
 const { Client } = require('@elastic/elasticsearch');
 
 const TABLE_ORG = process.env.TABLE_ORG;
-const IP_ES = '100.28.245.90';
+const IP_ES = '54.87.200.201';
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 
